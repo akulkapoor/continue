@@ -256,6 +256,18 @@
         "group": "Continue"
       },
       {
+        "command": "continue.viewRecentSessionTraces",
+        "category": "Continue",
+        "title": "View Recent Session Traces",
+        "group": "Continue"
+      },
+      {
+        "command": "continue.clearSessionTraces",
+        "category": "Continue",
+        "title": "Clear Saved Session Traces",
+        "group": "Continue"
+      },
+      {
         "command": "continue.viewHistory",
         "category": "Continue",
         "title": "View History",
@@ -523,6 +535,12 @@
         },
         {
           "command": "continue.saveSessionTrace"
+        },
+        {
+          "command": "continue.viewRecentSessionTraces"
+        },
+        {
+          "command": "continue.clearSessionTraces"
         },
         {
           "command": "continue.enterEnterpriseLicenseKey"
