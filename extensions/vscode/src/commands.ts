@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import * as fs from "node:fs";
 
-import { ContextMenuConfig, ILLM, ModelInstaller } from "core";
+import { ContextMenuConfig, ILLM, ModelInstaller, Session } from "core";
 import { CompletionProvider } from "core/autocomplete/CompletionProvider";
 import { ConfigHandler } from "core/config/ConfigHandler";
 import { EXTENSION_NAME } from "core/util/constants";
@@ -14,8 +14,13 @@ import { startLocalOllama } from "core/util/ollamaHelper";
 import {
   getConfigJsonPath,
   getConfigYamlPath,
+  getSessionTracesFolderPath,
   setConfigFilePermissions,
 } from "core/util/paths";
+import {
+  getSessionTraceFilename,
+  sessionToTraceMarkdown,
+} from "core/util/sessionTrace";
 import * as vscode from "vscode";
 import * as YAML from "yaml";
 
@@ -414,6 +419,59 @@ const getCommandsMap: (
       } catch (error) {
         const errorMessage = `Failed to save session: ${error instanceof Error ? error.message : String(error)}`;
         void vscode.window.showErrorMessage(errorMessage);
+      }
+    },
+    "continue.saveSessionTrace": async () => {
+      const sessionId = await sidebar.webviewProtocol?.request(
+        "getCurrentSessionId",
+        undefined,
+      );
+      if (!sessionId) {
+        void vscode.window.showErrorMessage(
+          "No session ID found. Please start a new session first.",
+        );
+        return;
+      }
+
+      let session: Session;
+      try {
+        session = core.invoke("history/load", { id: sessionId });
+      } catch (error) {
+        const errorMessage = `Failed to load session: ${error instanceof Error ? error.message : String(error)}`;
+        void vscode.window.showErrorMessage(errorMessage);
+        return;
+      }
+
+      if (!session.history.length) {
+        void vscode.window.showInformationMessage(
+          "No saved chat messages found for the current session.",
+        );
+        return;
+      }
+
+      const traceUri = vscode.Uri.joinPath(
+        vscode.Uri.file(getSessionTracesFolderPath()),
+        getSessionTraceFilename(session),
+      );
+
+      try {
+        await vscode.workspace.fs.writeFile(
+          traceUri,
+          new TextEncoder().encode(sessionToTraceMarkdown(session)),
+        );
+      } catch (error) {
+        const errorMessage = `Failed to save session trace: ${error instanceof Error ? error.message : String(error)}`;
+        void vscode.window.showErrorMessage(errorMessage);
+        return;
+      }
+
+      const openTrace = await vscode.window.showInformationMessage(
+        `Saved Continue session trace to ${traceUri.fsPath}`,
+        "Open Trace",
+      );
+      if (openTrace === "Open Trace") {
+        const document = await vscode.workspace.openTextDocument(traceUri);
+        await vscode.window.showTextDocument(document);
       }
     },
     "continue.viewHistory": () => {
