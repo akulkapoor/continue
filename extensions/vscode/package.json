@@ -262,12 +262,6 @@
         "group": "Continue"
       },
       {
-        "command": "continue.openSessionTrace",
-        "category": "Continue",
-        "title": "Open Session Trace",
-        "group": "Continue"
-      },
-      {
         "command": "continue.clearSessionTraces",
         "category": "Continue",
         "title": "Clear Saved Session Traces",
@@ -544,9 +538,6 @@
         },
         {
           "command": "continue.viewRecentSessionTraces"
-        },
-        {
-          "command": "continue.openSessionTrace"
         },
         {
           "command": "continue.clearSessionTraces"

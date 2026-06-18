@@ -530,14 +530,6 @@ const getCommandsMap: (
         await openSessionTraceFile(traceFile);
       }
     },
-    "continue.openSessionTrace": async () => {
-      const traceFile = await pickSessionTraceFile(
-        "Open a saved session trace",
-      );
-      if (traceFile) {
-        await openSessionTraceFile(traceFile);
-      }
-    },
     "continue.clearSessionTraces": async () => {
       const traceFiles = listSessionTraceFiles();
       if (!traceFiles.length) {
