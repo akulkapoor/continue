@@ -14,6 +14,7 @@ import { startLocalOllama } from "core/util/ollamaHelper";
 import {
   getConfigJsonPath,
   getConfigYamlPath,
+  getSessionFilePath,
   getSessionTracesFolderPath,
   setConfigFilePermissions,
 } from "core/util/paths";
@@ -435,6 +436,10 @@ const getCommandsMap: (
 
       let session: Session;
       try {
+        const sessionFilePath = getSessionFilePath(sessionId);
+        if (!fs.existsSync(sessionFilePath)) {
+          throw new Error(`Session file ${sessionFilePath} does not exist`);
+        }
         session = core.invoke("history/load", { id: sessionId });
       } catch (error) {
         const errorMessage = `Failed to load session: ${error instanceof Error ? error.message : String(error)}`;
