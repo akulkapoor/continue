@@ -454,15 +454,18 @@ const getCommandsMap: (
         return;
       }
 
+      const traceCreatedAt = new Date();
       const traceUri = vscode.Uri.joinPath(
         vscode.Uri.file(getSessionTracesFolderPath()),
-        getSessionTraceFilename(session),
+        getSessionTraceFilename(session, traceCreatedAt),
       );
 
       try {
         await vscode.workspace.fs.writeFile(
           traceUri,
-          new TextEncoder().encode(sessionToTraceMarkdown(session)),
+          new TextEncoder().encode(
+            sessionToTraceMarkdown(session, { traceCreatedAt }),
+          ),
         );
       } catch (error) {
         const errorMessage = `Failed to save session trace: ${error instanceof Error ? error.message : String(error)}`;
