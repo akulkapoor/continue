@@ -20,6 +20,8 @@ import {
 } from "core/util/paths";
 import {
   getSessionTraceFilename,
+  listSessionTraceFiles,
+  SessionTraceFile,
   sessionToTraceMarkdown,
 } from "core/util/sessionTrace";
 import * as vscode from "vscode";
@@ -108,6 +110,44 @@ function waitForSidebarReady(
 
     checkReadyState();
   });
+}
+
+async function openSessionTraceFile(traceFile: SessionTraceFile) {
+  const document = await vscode.workspace.openTextDocument(
+    vscode.Uri.file(traceFile.filepath),
+  );
+  await vscode.window.showTextDocument(document);
+}
+
+async function pickSessionTraceFile(
+  placeHolder: string,
+): Promise<SessionTraceFile | undefined> {
+  const traceFiles = listSessionTraceFiles();
+  if (!traceFiles.length) {
+    void vscode.window.showInformationMessage("No saved session traces found.");
+    return undefined;
+  }
+
+  const quickPickItems = traceFiles.map((traceFile) => {
+    const createdAt = new Date(traceFile.metadata.traceCreatedAt);
+    const createdAtLabel = Number.isNaN(createdAt.getTime())
+      ? traceFile.metadata.traceCreatedAt
+      : createdAt.toLocaleString();
+    return {
+      label: traceFile.metadata.title || traceFile.filename,
+      description: `${traceFile.metadata.messageCount} messages`,
+      detail: `${createdAtLabel} - ${traceFile.filepath}`,
+      traceFile,
+    };
+  });
+
+  const selected = await vscode.window.showQuickPick(quickPickItems, {
+    placeHolder,
+    matchOnDescription: true,
+    matchOnDetail: true,
+  });
+
+  return selected?.traceFile;
 }
 
 // Copy everything over from extension.ts
@@ -481,6 +521,56 @@ const getCommandsMap: (
         const document = await vscode.workspace.openTextDocument(traceUri);
         await vscode.window.showTextDocument(document);
       }
+    },
+    "continue.viewRecentSessionTraces": async () => {
+      const traceFile = await pickSessionTraceFile(
+        "Open a recent session trace",
+      );
+      if (traceFile) {
+        await openSessionTraceFile(traceFile);
+      }
+    },
+    "continue.openSessionTrace": async () => {
+      const traceFile = await pickSessionTraceFile(
+        "Open a saved session trace",
+      );
+      if (traceFile) {
+        await openSessionTraceFile(traceFile);
+      }
+    },
+    "continue.clearSessionTraces": async () => {
+      const traceFiles = listSessionTraceFiles();
+      if (!traceFiles.length) {
+        void vscode.window.showInformationMessage(
+          "No saved session traces found.",
+        );
+        return;
+      }
+
+      const confirm = await vscode.window.showWarningMessage(
+        `Delete ${traceFiles.length} saved Continue session trace${traceFiles.length === 1 ? "" : "s"}?`,
+        { modal: true },
+        "Delete Traces",
+      );
+      if (confirm !== "Delete Traces") {
+        return;
+      }
+
+      try {
+        await Promise.all(
+          traceFiles.map((traceFile) =>
+            vscode.workspace.fs.delete(vscode.Uri.file(traceFile.filepath)),
+          ),
+        );
+      } catch (error) {
+        const errorMessage = `Failed to clear session traces: ${error instanceof Error ? error.message : String(error)}`;
+        void vscode.window.showErrorMessage(errorMessage);
+        return;
+      }
+
+      void vscode.window.showInformationMessage(
+        `Deleted ${traceFiles.length} saved Continue session trace${traceFiles.length === 1 ? "" : "s"}.`,
+      );
     },
     "continue.viewHistory": () => {
       vscode.commands.executeCommand("continue.navigateTo", "/history", true);
