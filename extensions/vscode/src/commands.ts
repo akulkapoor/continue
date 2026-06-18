@@ -120,7 +120,7 @@ async function openSessionTraceFile(traceFile: SessionTraceFile) {
   await vscode.window.showTextDocument(document);
 }
 
-function listSessionTraceUris(): vscode.Uri[] {
+function getAllSessionTraceUris(): vscode.Uri[] {
   const traceDir = getSessionTracesFolderPath();
   if (!fs.existsSync(traceDir)) {
     return [];
@@ -546,7 +546,7 @@ const getCommandsMap: (
       }
     },
     "continue.clearSessionTraces": async () => {
-      const traceUris = listSessionTraceUris();
+      const traceUris = getAllSessionTraceUris();
       if (!traceUris.length) {
         void vscode.window.showInformationMessage(
           "No saved session traces found.",
