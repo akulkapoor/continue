@@ -136,8 +136,11 @@ function getAllSessionTraceUris(): vscode.Uri[] {
 
 async function pickSessionTraceFile(
   placeHolder: string,
+  excludeFilepath?: string,
 ): Promise<SessionTraceFile | undefined> {
-  const traceFiles = listSessionTraceFiles();
+  const traceFiles = listSessionTraceFiles().filter(
+    (traceFile) => traceFile.filepath !== excludeFilepath,
+  );
   if (!traceFiles.length) {
     void vscode.window.showInformationMessage("No saved session traces found.");
     return undefined;
@@ -544,6 +547,38 @@ const getCommandsMap: (
       if (traceFile) {
         await openSessionTraceFile(traceFile);
       }
+    },
+    "continue.diffSessionTraces": async () => {
+      if (listSessionTraceFiles().length < 2) {
+        void vscode.window.showInformationMessage(
+          "At least two saved session traces are required to diff.",
+        );
+        return;
+      }
+
+      const firstTrace = await pickSessionTraceFile(
+        "Select the first session trace to diff",
+      );
+      if (!firstTrace) {
+        return;
+      }
+
+      const secondTrace = await pickSessionTraceFile(
+        "Select the second session trace to diff",
+        firstTrace.filepath,
+      );
+      if (!secondTrace) {
+        return;
+      }
+
+      const firstUri = vscode.Uri.file(firstTrace.filepath);
+      const secondUri = vscode.Uri.file(secondTrace.filepath);
+      await vscode.commands.executeCommand(
+        "vscode.diff",
+        firstUri,
+        secondUri,
+        `${firstTrace.filename} <-> ${secondTrace.filename}`,
+      );
     },
     "continue.clearSessionTraces": async () => {
       const traceUris = getAllSessionTraceUris();
