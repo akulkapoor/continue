@@ -21,6 +21,7 @@ import {
 import {
   getSessionTraceFilename,
   listSessionTraceFiles,
+  SESSION_TRACE_FILE_EXTENSION,
   SessionTraceFile,
   sessionToTraceMarkdown,
 } from "core/util/sessionTrace";
@@ -117,6 +118,20 @@ async function openSessionTraceFile(traceFile: SessionTraceFile) {
     vscode.Uri.file(traceFile.filepath),
   );
   await vscode.window.showTextDocument(document);
+}
+
+function listSessionTraceUris(): vscode.Uri[] {
+  const traceDir = getSessionTracesFolderPath();
+  if (!fs.existsSync(traceDir)) {
+    return [];
+  }
+
+  return fs
+    .readdirSync(traceDir)
+    .filter((filename) => filename.endsWith(SESSION_TRACE_FILE_EXTENSION))
+    .map((filename) =>
+      vscode.Uri.joinPath(vscode.Uri.file(traceDir), filename),
+    );
 }
 
 async function pickSessionTraceFile(
@@ -531,8 +546,8 @@ const getCommandsMap: (
       }
     },
     "continue.clearSessionTraces": async () => {
-      const traceFiles = listSessionTraceFiles();
-      if (!traceFiles.length) {
+      const traceUris = listSessionTraceUris();
+      if (!traceUris.length) {
         void vscode.window.showInformationMessage(
           "No saved session traces found.",
         );
@@ -540,7 +555,7 @@ const getCommandsMap: (
       }
 
       const confirm = await vscode.window.showWarningMessage(
-        `Delete ${traceFiles.length} saved Continue session trace${traceFiles.length === 1 ? "" : "s"}?`,
+        `Delete ${traceUris.length} saved Continue session trace${traceUris.length === 1 ? "" : "s"}?`,
         { modal: true },
         "Delete Traces",
       );
@@ -550,9 +565,7 @@ const getCommandsMap: (
 
       try {
         await Promise.all(
-          traceFiles.map((traceFile) =>
-            vscode.workspace.fs.delete(vscode.Uri.file(traceFile.filepath)),
-          ),
+          traceUris.map((traceUri) => vscode.workspace.fs.delete(traceUri)),
         );
       } catch (error) {
         const errorMessage = `Failed to clear session traces: ${error instanceof Error ? error.message : String(error)}`;
@@ -561,7 +574,7 @@ const getCommandsMap: (
       }
 
       void vscode.window.showInformationMessage(
-        `Deleted ${traceFiles.length} saved Continue session trace${traceFiles.length === 1 ? "" : "s"}.`,
+        `Deleted ${traceUris.length} saved Continue session trace${traceUris.length === 1 ? "" : "s"}.`,
       );
     },
     "continue.viewHistory": () => {
